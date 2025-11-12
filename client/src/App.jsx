@@ -3,7 +3,7 @@ import {Toaster} from 'react-hot-toast';
 import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import LoginPage from './pages/LoginPage';
-import Applications from './pages/applications';
+import Applications from './pages/Applications';
 import Phases from './pages/Phases';
 import ConnectedServices from './pages/ConnectedServices';
 import Dashboard from './pages/Dashboard';
