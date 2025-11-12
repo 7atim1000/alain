@@ -91,7 +91,7 @@ const Applications = () => {
                     <h1 className='text-2xl max-md:text-xl font-bold text-[#1a1a1a]'>Applications Management</h1>
                 </div>
 
-                <div className='flex gap-2 items-center justify-around gap-3 md:hover:bg-gray-400 shadow-lg/30 bg-white pb-2'>
+                <div className='flex gap-2 items-center justify-around gap-3 md:hover:bg-gray-400 shadow-lg/30 bg-white max-md:pb-2'>
                
                     
                     {Button.map(({ label, icon, action }) => {
