@@ -4,6 +4,10 @@ import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from '../context/AuthContext.jsx'
 
+// import 'tailwindcss/tailwind.css' 
+// This imports all Tailwind styles
+
+
 createRoot(document.getElementById('root')).render(
   <Router>
     <AuthProvider>

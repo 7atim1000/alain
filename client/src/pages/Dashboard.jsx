@@ -1,21 +1,20 @@
 import { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../../context/AuthContext";
-import { AiOutlineLogout, AiOutlineAppstore, AiOutlineCloudServer } from "react-icons/ai";
-import { IoMdLogIn } from "react-icons/io";
+import { AiOutlineLogout, AiOutlineAppstore } from "react-icons/ai";
+import { FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { MdOutlinePhonelink, MdOutlineIntegrationInstructions } from "react-icons/md";
 import axios from "axios";
 import { toast } from "react-toastify";
-import {  FiLink, FiDatabase, FiBarChart, FiActivity } from "react-icons/fi";
-import BottomNav from "../components/shared/BottomNav";
-
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
     const { logout, user } = useContext(AuthContext);
+    const navigate = useNavigate();
     const [applications, setApplications] = useState([]);
-    const [connectedServices, setConnectedServices] = useState({});
     const [phases, setPhases] = useState({});
     const [loading, setLoading] = useState(true);
-    const [servicesLoading, setServicesLoading] = useState({});
     const [phasesLoading, setPhasesLoading] = useState({});
+    const [expandedApp, setExpandedApp] = useState(null);
 
     // Fetch applications
     const fetchApps = async () => {
@@ -23,10 +22,6 @@ const Dashboard = () => {
             const { data } = await axios.get('/v1/api/app');
             if (data.success) {
                 setApplications(data.applications);
-                // Automatically load services for all applications
-                data.applications.forEach(app => {
-                    fetchConnectedServices(app._id);
-                });
             } else {
                 toast.error(data.message);
             }
@@ -36,40 +31,6 @@ const Dashboard = () => {
             setLoading(false);
         }
     };
-
-    // Fetch connected services for an application
-    const fetchConnectedServices = async (applicationId) => {
-        if (!applicationId) return;
-
-        setServicesLoading(prev => ({ ...prev, [applicationId]: true }));
-        try {
-            const { data } = await axios.get(`/v1/api/connected-services/${applicationId}`);
-            
-            if (data.success || data.sucess) {
-                const services = data.services || data.connectedServices || [];
-                setConnectedServices(prev => ({
-                    ...prev,
-                    [applicationId]: services
-                }));
-            } else {
-                toast.error(data.message);
-                setConnectedServices(prev => ({
-                    ...prev,
-                    [applicationId]: []
-                }));
-            }
-        } catch (error) {
-            toast.error(error.response?.data?.message || error.message);
-            setConnectedServices(prev => ({
-                ...prev,
-                [applicationId]: []
-            }));
-        } finally {
-            setServicesLoading(prev => ({ ...prev, [applicationId]: false }));
-        }
-    };
-
-    
 
     // Fetch phases for a specific application
     const fetchPhases = async (applicationId) => {
@@ -103,14 +64,13 @@ const Dashboard = () => {
 
     // Toggle phases visibility
     const togglePhases = (appId) => {
-        if (!phases[appId] && !phasesLoading[appId]) {
-            fetchPhases(appId);
+        if (expandedApp === appId) {
+            setExpandedApp(null);
         } else {
-            // If phases already loaded, just toggle visibility by setting to empty array
-            setPhases(prev => ({
-                ...prev,
-                [appId]: phases[appId] ? null : prev[appId]
-            }));
+            setExpandedApp(appId);
+            if (!phases[appId] && !phasesLoading[appId]) {
+                fetchPhases(appId);
+            }
         }
     };
 
@@ -118,278 +78,284 @@ const Dashboard = () => {
         fetchApps();
     }, []);
 
-    const getServiceCount = (appId) => {
-        return connectedServices[appId] ? connectedServices[appId].length : 0;
-    };
-
     const getPhaseCount = (appId) => {
         return phases[appId] ? phases[appId].length : 0;
     };
 
+    const handleLogout = () => {
+        logout();
+        navigate('/admin-login');
+    };
+
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-taupe border-t-transparent"></div>
             </div>
         );
-    };
-
-
-
-
-    // Helper function to map service name to service type
-    const mapServiceNameToType = (serviceName) => {
-        if (!serviceName) return 'custom';
-        const name = serviceName.toLowerCase();
-        if (name.includes('logic apps')) return 'logic-apps';
-        if (name.includes('fabric')) return 'fabric-dw';
-        if (name.includes('bi') || name.includes('reporting')) return 'power-bi';
-        if (name.includes('azure')) return 'azure-sql';
-        return 'custom';
-    };
-
-     // Service type configurations - simplified to match your schema
-    const serviceTypes = [
-        { value: 'logic-apps', label: 'Microsoft Logic Apps', icon: FiActivity, color: 'blue' },
-        { value: 'fabric-dw', label: 'Microsoft Fabric DW', icon: FiDatabase, color: 'purple' },
-        { value: 'power-bi', label: 'Microsoft Power BI', icon: FiBarChart, color: 'yellow' },
-        { value: 'reporting', label: 'Microsoft Reporting', icon: FiBarChart, color: 'green' },
-        { value: 'azure-sql', label: 'Azure SQL', icon: FiDatabase, color: 'blue' },
-        { value: 'api', label: 'Custom API', icon: FiLink, color: 'gray' },
-        { value: 'custom', label: 'Custom Service', icon: FiLink, color: 'gray' }
-    ];
-
-    // Get service type info
-    const getServiceTypeInfo = (serviceType) => {
-        return serviceTypes.find(st => st.value === serviceType) || serviceTypes[0];
-    };
-       const getServiceColorClasses = (color) => {
-        const colorMap = {
-            blue: 'bg-blue-50 border-blue-200 text-blue-700',
-            purple: 'bg-purple-50 border-purple-200 text-purple-700',
-            yellow: 'bg-yellow-50 border-yellow-200 text-yellow-700',
-            green: 'bg-green-50 border-green-200 text-green-700',
-            gray: 'bg-gray-50 border-gray-200 text-gray-700'
-        };
-        return colorMap[color] || colorMap.gray;
-    };
-
+    }
 
     return (
-        <div className ='pb-10'>
-            {/* Keep the original header */}
-            <div className='py-2 px-4 flex justify-between border-b-2 border-gray-300 bg-linear-65 from-gray-300 to-white '>
-                <img 
-                    src={"https://qhog2afd8z.ufs.sh/f/QPIkmpwp4jFOrz0Arj9RjXHmoUKDyA4pcMs0bTvPBrwkxq1G"} 
-                    alt="Logo"
-                    className='w-[120px] max-sm:w-[100px] cursor-pointer' 
-                />
-
-                <div className='flex items-center gap-6'>
-                    <button
-                        onClick={() => {
-                            if (user) {
-                                logout();
-                            } 
-                        }}
-                        className={`cursor-pointer px-2 py-2 transition-all rounded-lg ${
-                            user ? 'text-gray-700' : 'text-primary'
-                        }`}
-                    >
-                        {user ? 'Logout' : 'Login'}
-                        {user ? 
-                            <AiOutlineLogout className='inline ml-1 text-[#be3e3f] w-5 h-5' /> : 
-                            <IoMdLogIn className='inline ml-1 w-5 h-5' />
-                        }
-                    </button>
-                    {/* <p>{user.fullName}</p> */}
+        // <div className="min-h-screen bg-black text-white w-full">
+            <section className='overflow-y-scroll scrollbar-hidden bg-black text-white pl-0 w-full'>
+ 
+            {/* Header */}
+            <div className="bg-white/5 border-b border-gray-800">
+                <div className="container mx-auto px-4 py-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold text-white">Admin Dashboard</h1>
+                            <p className="text-gray-400 mt-1">Manage applications and phases</p>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-taupe to-taupe/70 flex items-center justify-center">
+                                    <span className="font-bold">
+                                        {user?.name?.charAt(0) || user?.email?.charAt(0) || 'A'}
+                                    </span>
+                                </div>
+                                <div className="hidden md:block">
+                                    <p className="font-medium text-white">{user?.name || 'Admin'}</p>
+                                    <p className="text-sm text-gray-400">{user?.email || 'admin@example.com'}</p>
+                                </div>
+                            </div>
+                            
+                            <button
+                                onClick={handleLogout}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors border border-gray-700"
+                            >
+                                <AiOutlineLogout className="w-5 h-5" />
+                                <span className="hidden md:inline">Logout</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Dashboard Content */}
-            <div className="min-h-screen bg-gray-50 p-2">
-                {/* Stats Overview */}
-                {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-white rounded-lg shadow-sm p-6">
-                        <div className="flex items-center">
-                            <div className="p-3 bg-blue-100 rounded-lg">
-                                <AiOutlineAppstore className="text-blue-600" size={24} />
+            {/* Stats Overview */}
+            <div className="container mx-auto px-4 py-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white/5 border border-gray-800 rounded-xl p-6 hover:bg-white/10 transition-colors">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-lg bg-taupe/20 flex items-center justify-center">
+                                <AiOutlineAppstore className="w-6 h-6 text-taupe" />
                             </div>
-                            <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-600">Total Applications</p>
-                                <p className="text-2xl font-bold text-gray-900">{applications.length}</p>
+                            <div>
+                                <p className="text-gray-400 text-sm">Total Applications</p>
+                                <p className="text-2xl font-bold text-white">{applications.length}</p>
                             </div>
                         </div>
                     </div>
                     
-                    <div className="bg-white rounded-lg shadow-sm p-6">
-                        <div className="flex items-center">
-                            <div className="p-3 bg-green-100 rounded-lg">
-                                <AiOutlineCloudServer className="text-green-600" size={24} />
+                    <div className="bg-white/5 border border-gray-800 rounded-xl p-6 hover:bg-white/10 transition-colors">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-lg bg-taupe/20 flex items-center justify-center">
+                                <MdOutlineIntegrationInstructions className="w-6 h-6 text-taupe" />
                             </div>
-                            <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-600">Total Services</p>
-                                <p className="text-2xl font-bold text-gray-900">
-                                    {applications.reduce((acc, app) => acc + getServiceCount(app._id), 0)}
+                            <div>
+                                <p className="text-gray-400 text-sm">Total Phases</p>
+                                <p className="text-2xl font-bold text-white">
+                                    {applications.reduce((total, app) => total + getPhaseCount(app._id), 0)}
                                 </p>
                             </div>
                         </div>
                     </div>
-
-                    <div className="bg-white rounded-lg shadow-sm p-6">
-                        <div className="flex items-center">
-                            <div className="p-3 bg-purple-100 rounded-lg">
-                                <AiOutlineAppstore className="text-purple-600" size={24} />
+                    
+                    <div className="bg-white/5 border border-gray-800 rounded-xl p-6 hover:bg-white/10 transition-colors">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-lg bg-taupe/20 flex items-center justify-center">
+                                <MdOutlinePhonelink className="w-6 h-6 text-taupe" />
                             </div>
-                            <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-600">Total Phases</p>
-                                <p className="text-2xl font-bold text-gray-900">
-                                    {applications.reduce((acc, app) => acc + getPhaseCount(app._id), 0)}
+                            <div>
+                                <p className="text-gray-400 text-sm">Active Systems</p>
+                                <p className="text-2xl font-bold text-white">
+                                    {applications.filter(app => getPhaseCount(app._id) > 0).length}
                                 </p>
                             </div>
                         </div>
                     </div>
-                </div> */}
+                </div>
 
                 {/* Applications List */}
-                <div className="bg-white rounded-lg shadow-sm">
-                    <div className="p-3 shadow-lg">
-                        <h2 className="text-xl font-semibold text-gray-900">Applications Overview</h2>
+                <div className="bg-white/5 border border-gray-800 rounded-xl overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-800">
+                        <h2 className="text-xl font-bold text-white">Applications</h2>
+                        <p className="text-gray-400 text-sm">Click to view implementation phases</p>
                     </div>
                     
-                    <div className="divide-y-red-500">
-                        {applications.map((app) => (
-                            <div key={app._id} className="p-3">
-                                {/* Application Header */}
-                                <div className="flex justify-between items-center mb-2">
-                                    <div>
-                                        <h3 className="text-lg font-medium text-gray-900">
-                                            {app.appName || app.name || app.applicationName}
-                                        </h3>
-                                        {/* <p className="text-sm text-gray-500 mt-1">
-                                            ID: {app._id}
-                                        </p> */}
-                                    </div>
-                                    
-                                    {/* <button 
-                                        onClick={() => togglePhases(app._id)}
-                                        className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-300 cursor-pointer transition-colors"
-                                    >
-                                        {phases[app._id] ? 'Hide Phases' : 'View Phases'}
-                                    </button> */}
-
+                    <div className="divide-y divide-gray-800">
+                        {applications.length === 0 ? (
+                            <div className="p-8 text-center">
+                                <AiOutlineAppstore className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                                <p className="text-gray-400">No applications found</p>
+                                <p className="text-gray-500 text-sm mt-1">Create your first application to get started</p>
+                            </div>
+                        ) : (
+                            applications.map((app) => (
+                                <div key={app._id} className="hover:bg-white/5 transition-colors">
                                     <button
                                         onClick={() => togglePhases(app._id)}
-                                        className={`px-4 py-2 rounded-lg  cursor-pointer transition-colors max-md:text-sm ${phases[app._id]
-                                                ? 'bg-red-100 text-[#be3e3f] hover:bg-gray-400 hover:text-white'  // Hide Phases style
-                                                : 'bg-gray-500 text-white hover:bg-gray-600'  // View Phases style
-                                            }`}
+                                        className="w-full p-6 flex flex-col md:flex-row md:items-center justify-between text-left"
                                     >
-                                        {phases[app._id] ? 'Hide Phases' : 'View Phases'}
-                                    </button>
-                                </div>
-
-                                {/* Services Section - Always visible */}
-                                <div className="mb-1">
-                                    {/* <h4 className="font-medium text-gray-900 mb-3">
-                                        Connected Services ({getServiceCount(app._id)})
-                                    </h4> */}
-                                    {servicesLoading[app._id] ? (
-                                        <div className="flex justify-center py-2">
-                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-200"></div>
-                                        </div>
-                                    ) : connectedServices[app._id] && connectedServices[app._id].length > 0 ? (
-                                        
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                                           
-                                            {/* {connectedServices[app._id].map((service, index) => (
-                                                <div key={service._id || index} className="bg-gray-100 p-3 rounded-lg border border-gray-100">
-                                                    <p className="text-sm font-medium text-gray-900">
-                                                        {service.serviceName || service.name}
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-lg bg-taupe/20 flex items-center justify-center">
+                                                    <AiOutlineAppstore className="w-6 h-6 text-taupe" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-white text-lg">
+                                                        {app.appName || app.name || app.applicationName || 'Unnamed Application'}
+                                                    </h3>
+                                                    <p className="text-gray-400 text-sm mt-1">
+                                                        {app.description || 'No description provided'}
                                                     </p>
                                                 </div>
-                                            ))} */}
-
-                                             {connectedServices[app._id].map((service, index) => {
-                                                // Map service name to type since your schema doesn't have serviceType
-                                                const serviceType = mapServiceNameToType(service.serviceName);
-                                                const serviceInfo = getServiceTypeInfo(serviceType);
-                                                const IconComponent = serviceInfo.icon;
-                                                const colorClasses = getServiceColorClasses(serviceInfo.color);
-                                                
-                                                return (
-                                                    <div 
-                                                        key={service._id || index} 
-                                                        className={`p-3 rounded-lg border ${colorClasses} flex items-center space-x-3`}
-                                                    >
-                                                        <IconComponent className="flex-shrink-0" size={18} />
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="text-sm font-medium truncate">
-                                                                {service.serviceName || service.name}
-                                                            </p>
-                                                            <p className="text-xs opacity-75 truncate">
-                                                                {serviceInfo.label}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-
+                                            </div>
                                         </div>
-                                    ) : (
-                                        <p className="text-sm text-gray-500 italic">No services connected</p>
+                                        
+                                        <div className="flex items-center gap-4 mt-4 md:mt-0">
+                                            <div className="px-3 py-1 rounded-full bg-taupe/20 text-taupe text-sm font-medium">
+                                                {getPhaseCount(app._id)} phases
+                                            </div>
+                                            <div className="text-gray-400">
+                                                {expandedApp === app._id ? (
+                                                    <FiChevronUp className="w-5 h-5" />
+                                                ) : (
+                                                    <FiChevronDown className="w-5 h-5" />
+                                                )}
+                                            </div>
+                                        </div>
+                                    </button>
+                                    
+                                    {/* Phases List */}
+                                    {expandedApp === app._id && (
+                                        <div className="px-6 pb-6">
+                                            {phasesLoading[app._id] ? (
+                                                <div className="flex items-center justify-center py-8">
+                                                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-taupe border-t-transparent"></div>
+                                                </div>
+                                            ) : phases[app._id] && phases[app._id].length > 0 ? (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    {phases[app._id].map((phase, index) => (
+                                                        <div 
+                                                            key={phase._id || index} 
+                                                            className="bg-white/5 border border-gray-800 rounded-lg p-4 hover:bg-white/10 transition-colors"
+                                                        >
+                                                            <div className="flex items-start justify-between mb-2">
+                                                                <h4 className="font-medium text-white">
+                                                                    {phase.phaseName || phase.name || `Phase ${index + 1}`}
+                                                                </h4>
+                                                                {phase.status && (
+                                                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                                                        phase.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                                                                        phase.status === 'in-progress' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                                        'bg-gray-500/20 text-gray-400'
+                                                                    }`}>
+                                                                        {phase.status}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            
+                                                            {phase.description && (
+                                                                <p className="text-gray-400 text-sm mb-3 line-clamp-2">
+                                                                    {phase.description}
+                                                                </p>
+                                                            )}
+                                                            
+                                                            {phase.completionDate && (
+                                                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                    </svg>
+                                                                    {new Date(phase.completionDate).toLocaleDateString('en-GB', {
+                                                                        day: '2-digit',
+                                                                        month: 'short',
+                                                                        year: 'numeric'
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-8 border border-gray-800 rounded-lg">
+                                                    <MdOutlineIntegrationInstructions className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                                                    <p className="text-gray-400">No phases configured</p>
+                                                    <p className="text-gray-500 text-sm mt-1">
+                                                        Add implementation phases for this application
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
-                                <hr className ='text-gray-200'/>
-
-                                {/* Phases Section - Visible when toggled */}
-                                {phasesLoading[app._id] ? (
-                                    <div className="flex justify-center py-4">
-                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-                                    </div>
-                                ) : phases[app._id] && phases[app._id].length > 0 ? (
-                                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                                        <h4 className="font-medium text-gray-900 mb-3">
-                                            Phases ({phases[app._id].length})
-                                        </h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                                            {phases[app._id].map((phase, index) => (
-                                                <div key={phase._id || index} className="bg-white p-3 rounded-lg border">
-                                                    <p className="text-sm font-medium text-gray-900">
-                                                        {phase.phaseName || phase.name}
-                                                    </p>
-                                                    {phase.completionDate && (
-                                                       
-                                                        <p className="text-xs text-gray-500 mt-1">
-                                                            <span>Completion Date : {new Date(phase.completionDate).toLocaleDateString('en-GB')}</span>
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : phases[app._id] ? (
-                                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                                        <p className="text-sm text-gray-500 italic">No phases found</p>
-                                    </div>
-                                ) : null}
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </div>
-
-                {/* Empty State */}
-                {applications.length === 0 && (
-                    <div className="text-center py-12">
-                        <AiOutlineAppstore className="mx-auto text-gray-400" size={48} />
-                        <h3 className="mt-4 text-lg font-medium text-gray-900">No applications found</h3>
-                        <p className="mt-2 text-gray-500">Get started by creating your first application.</p>
+                
+                {/* Quick Actions */}
+                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white/5 border border-gray-800 rounded-xl p-6">
+                        <h3 className="font-bold text-white mb-4">Quick Actions</h3>
+                        <div className="space-y-3">
+                            <button className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+                                <span className="text-white">Add New Application</span>
+                                <AiOutlineAppstore className="w-5 h-5" />
+                            </button>
+                            <button className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+                                <span className="text-white">Manage Phases</span>
+                                <MdOutlineIntegrationInstructions className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
-                )}
+                    
+                    <div className="bg-white/5 border border-gray-800 rounded-xl p-6">
+                        <h3 className="font-bold text-white mb-4">System Status</h3>
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Applications</span>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                    <span className="text-white">All Systems Operational</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-gray-400">API Service</span>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                    <span className="text-white">Online</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Database</span>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                    <span className="text-white">Connected</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-
-            <BottomNav />
-        </div>
+            
+            {/* Footer */}
+            <div className="border-t border-gray-800 mt-8 py-6">
+                <div className="container mx-auto px-4">
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                        <p className="text-gray-500 text-sm">
+                            © {new Date().getFullYear()} Alain Company. All rights reserved.
+                        </p>
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                            <span>Admin Dashboard v1.0</span>
+                            <span>•</span>
+                            <span>Last updated: {new Date().toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     );
 };
 

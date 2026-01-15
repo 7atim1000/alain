@@ -6,6 +6,7 @@ import { Outlet, useNavigate } from 'react-router-dom' ;
 
 import { useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
+import Dashboard from './Dashboard';
 
 const Layout = () => {
     const {isAdmin} = useContext(AuthContext);
@@ -17,12 +18,13 @@ const Layout = () => {
     // }, [isAdmin]);
 
     return (
-        <div className ='flex flex-col'>
-            <NavbarAdmin />
+        <div className ='flex flex-col bg-taupe'>
+            {/* <NavbarAdmin /> */}
             
-            <div className ='flex'>
+            <div className ='flex bg-taupe'>
                 <Sidebar/>
                 <Outlet/>
+                
             </div>
         </div>
     );

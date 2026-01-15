@@ -11,13 +11,17 @@ const NavbarOwner = () => {
     
     
     return (
-        <div className ='flex flex-col md:flex-row items-center justify-between px-6 md:px-10 py-2 text-white border-b border-borderColor
-        relative transition-all bg-gray-600'>
+        <div className ='flex flex-col md:flex-row items-center justify-between px-6 md:px-10 py-2 text-white 
+        relative transition-all bg-black mb-1'>
             <Link to ='/'>
                 <div className ='flex items-center gap-2'>
-                   <img src="https://qhog2afd8z.ufs.sh/f/QPIkmpwp4jFOx6o6LSCCNTz3wnyR1iYbmJcFrVvhHMXdG9SP" 
-                   className='w-13 h-13 rounded-full' />
-                   
+                   <img
+                            src={"https://qhog2afd8z.ufs.sh/f/QPIkmpwp4jFOrz0Arj9RjXHmoUKDyA4pcMs0bTvPBrwkxq1G"}
+                            
+                            alt="Logo"
+                            className="h-12 md:h-15 w-auto invert mb-0.5 md:mb-1"
+                    />
+              
                 </div>
             </Link>
             <p className ='text-white'><span className ='text-xs text-gray-300'>Welecome</span> {user?.fullName || "Owner"}</p>

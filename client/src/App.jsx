@@ -43,10 +43,14 @@ const App = () => {
           <Route path='phases' element ={<Phases />} />
           <Route path='profile' element ={<Profile />} /> */}
 
-          <Route path='apps' element={authUser ? <Applications /> : <LoginPage />} />
-          <Route path='phases' element={authUser ? <Phases /> : <LoginPage />} />
+          {/* <Route path='apps' element={authUser ? <Applications /> : <LoginPage />} /> */}
+          <Route path='apps' element={authUser ? <Applications /> : <Navigate to="/admin-login" />} />
+          {/* <Route path='phases' element={authUser ? <Phases /> : <LoginPage />} /> */}
+          <Route path='phases' element={authUser ? <Phases /> : <Navigate to="/admin-login" />} />
+          <Route path='profile' element={authUser ? <Profile /> : <Navigate to="/admin-login" />} />
+        
           <Route path='m-services' element={authUser ? <ConnectedServices /> : <LoginPage />} />
-          <Route path='profile' element={authUser ? <Profile /> : <LoginPage />} />
+         
             
         </Route>
         
